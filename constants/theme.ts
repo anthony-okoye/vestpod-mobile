@@ -8,7 +8,7 @@
 import { Platform } from 'react-native';
 
 // Brand colors
-const brandPrimary = '#0a7ea4';
+const brandPrimary = '#1E3A8A';
 const brandSecondary = '#6366F1';
 
 // Semantic colors (shared between themes)
@@ -80,6 +80,14 @@ export const Colors = {
     
     // Status bar
     statusBar: 'dark',
+    
+    // Auth-specific colors
+    authGradientStart: '#1E3A8A',
+    authGradientEnd: '#1E3A6F',
+    authCardBackground: '#FFFFFF',
+    authCardShadow: 'rgba(0, 0, 0, 0.1)',
+    authInputBackground: '#F5F5F5',
+    authBrandText: '#FFFFFF',
   },
   dark: {
     // Base colors
@@ -137,6 +145,14 @@ export const Colors = {
     
     // Status bar
     statusBar: 'light',
+    
+    // Auth-specific colors (same as light mode for consistency)
+    authGradientStart: '#2B4C8F',
+    authGradientEnd: '#1E3A6F',
+    authCardBackground: '#FFFFFF',
+    authCardShadow: 'rgba(0, 0, 0, 0.1)',
+    authInputBackground: '#F5F5F5',
+    authBrandText: '#FFFFFF',
   },
 };
 

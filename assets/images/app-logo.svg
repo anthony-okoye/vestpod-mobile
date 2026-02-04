@@ -1,0 +1,16 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Circular background with semi-transparent white -->
+  <circle cx="40" cy="40" r="40" fill="rgba(255, 255, 255, 0.2)"/>
+  
+  <!-- Upward trending arrow -->
+  <path d="M25 50 L40 30 L55 40 L55 25 L70 25 L70 40 L55 40" 
+        stroke="white" 
+        stroke-width="3" 
+        stroke-linecap="round" 
+        stroke-linejoin="round" 
+        fill="none"/>
+  
+  <!-- Arrow head -->
+  <path d="M65 30 L70 25 L70 30 Z" 
+        fill="white"/>
+</svg>

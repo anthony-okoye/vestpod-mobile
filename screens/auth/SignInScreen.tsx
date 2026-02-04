@@ -23,6 +23,10 @@ import { AuthStackScreenProps } from '@/navigation/types';
 import { supabase } from '@/services/supabase';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/slices/authSlice';
+import { GradientBackground } from '@/components/auth/GradientBackground';
+import { BrandHeader } from '@/components/auth/BrandHeader';
+import { FormCard } from '@/components/auth/FormCard';
+import { OAuthButton } from '@/components/auth/OAuthButton';
 
 type Props = AuthStackScreenProps<'SignIn'>;
 
@@ -117,20 +121,20 @@ export default function SignInScreen({ navigation }: Props) {
     }
   };
 
-  const handleAppleSignIn = async () => {
+  const handleGitHubSignIn = async () => {
     setApiError(null);
     setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
+        provider: 'github',
       });
 
       if (error) {
         setApiError(error.message);
       }
     } catch (error) {
-      setApiError('Apple sign-in failed. Please try again.');
+      setApiError('GitHub sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -145,130 +149,158 @@ export default function SignInScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <GradientBackground>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to access your portfolio</Text>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <BrandHeader tagline="Welcome back! Sign in to continue" />
 
-        {apiError && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{apiError}</Text>
-          </View>
-        )}
+          <FormCard>
+            <View style={styles.header}>
+              <Text style={styles.title}>Sign In</Text>
+              <Text style={styles.subtitle}>Enter your credentials to access your portfolio</Text>
+            </View>
 
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="john.doe@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
+            {apiError && (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorIcon}>⚠</Text>
+                <Text style={styles.errorBannerText}>{apiError}</Text>
+              </View>
             )}
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Enter password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading}
-            />
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            )}
-          </View>
+            <View style={styles.form}>
+              <View style={styles.field}>
+                <Text style={styles.label}>Email</Text>
+                <TextInput
+                  style={[styles.input, errors.email && styles.inputError]}
+                  placeholder="john.doe@example.com"
+                  placeholderTextColor="#9CA3AF"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                  accessible={true}
+                  accessibilityLabel="Email address"
+                  accessibilityHint="Enter your email address"
+                  accessibilityState={{ disabled: isLoading }}
+                />
+                {errors.email && (
+                  <Text style={styles.errorText}>{errors.email}</Text>
+                )}
+              </View>
 
-          <TouchableOpacity
-            onPress={navigateToPasswordReset}
-            disabled={isLoading}
-            style={styles.forgotPassword}
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+              <View style={styles.field}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={[styles.input, errors.password && styles.inputError]}
+                  placeholder="Enter password"
+                  placeholderTextColor="#9CA3AF"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                  accessible={true}
+                  accessibilityLabel="Password"
+                  accessibilityHint="Enter your password"
+                  accessibilityState={{ disabled: isLoading }}
+                />
+                {errors.password && (
+                  <Text style={styles.errorText}>{errors.password}</Text>
+                )}
+              </View>
 
-          <TouchableOpacity
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-            onPress={handleSignIn}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <View style={styles.oauthButtons}>
-            <TouchableOpacity
-              style={styles.oauthButton}
-              onPress={handleGoogleSignIn}
-              disabled={isLoading}
-            >
-              <Text style={styles.oauthButtonText}>Google</Text>
-            </TouchableOpacity>
-
-            {Platform.OS === 'ios' && (
               <TouchableOpacity
-                style={styles.oauthButton}
-                onPress={handleAppleSignIn}
+                onPress={navigateToPasswordReset}
                 disabled={isLoading}
+                style={styles.forgotPassword}
+                accessible={true}
+                accessibilityLabel="Forgot password"
+                accessibilityRole="button"
+                accessibilityHint="Navigate to password reset screen"
               >
-                <Text style={styles.oauthButtonText}>Apple</Text>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
-            )}
-          </View>
-        </View>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account?</Text>
-          <TouchableOpacity onPress={navigateToSignUp} disabled={isLoading}>
-            <Text style={styles.linkText}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              <TouchableOpacity
+                style={[styles.button, isLoading && styles.buttonDisabled]}
+                onPress={handleSignIn}
+                disabled={isLoading}
+                accessible={true}
+                accessibilityLabel={isLoading ? "Signing in, please wait" : "Sign in"}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isLoading, busy: isLoading }}
+                accessibilityHint="Sign in to your account"
+              >
+                {isLoading ? (
+                  <>
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <Text style={styles.buttonLoadingText}>Signing in...</Text>
+                  </>
+                ) : (
+                  <Text style={styles.buttonText}>Sign In</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <View style={styles.oauthButtons}>
+                <OAuthButton
+                  provider="google"
+                  onPress={handleGoogleSignIn}
+                  disabled={isLoading}
+                />
+                <OAuthButton
+                  provider="github"
+                  onPress={handleGitHubSignIn}
+                  disabled={isLoading}
+                />
+              </View>
+            </View>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Don't have an account?</Text>
+              <TouchableOpacity 
+                onPress={navigateToSignUp} 
+                disabled={isLoading}
+                accessible={true}
+                accessibilityLabel="Sign up"
+                accessibilityRole="button"
+                accessibilityHint="Navigate to sign up screen"
+                style={styles.footerLink}
+              >
+                <Text style={styles.linkText}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
+          </FormCard>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    paddingBottom: 24,
   },
   header: {
-    marginBottom: 32,
-    marginTop: 60,
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -285,11 +317,22 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#DC2626',
   },
   errorBannerText: {
     color: '#DC2626',
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: 'left',
+    flex: 1,
+    fontWeight: '500',
   },
   form: {
     flex: 1,
@@ -304,15 +347,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#F5F5F5',
     borderRadius: 8,
-    padding: 12,
+    padding: 14,
     fontSize: 16,
     color: '#11181C',
-    backgroundColor: '#FAFAFA',
+    borderWidth: 0,
   },
   inputError: {
+    borderWidth: 1,
     borderColor: '#DC2626',
   },
   errorText: {
@@ -323,25 +366,38 @@ const styles = StyleSheet.create({
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 16,
+    minHeight: 44, // WCAG minimum touch target
+    justifyContent: 'center',
   },
   forgotPasswordText: {
-    color: '#0a7ea4',
+    color: '#2B4C8F',
     fontSize: 14,
     fontWeight: '500',
   },
   button: {
-    backgroundColor: '#0a7ea4',
-    padding: 16,
+    backgroundColor: '#2B4C8F',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48, // Slightly larger for primary action
+    flexDirection: 'row',
   },
   buttonDisabled: {
     backgroundColor: '#9CA3AF',
+    opacity: 0.7,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  buttonLoadingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   divider: {
     flexDirection: 'row',
@@ -356,24 +412,12 @@ const styles = StyleSheet.create({
   dividerText: {
     marginHorizontal: 12,
     color: '#687076',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '500',
   },
   oauthButtons: {
     flexDirection: 'row',
     gap: 12,
-  },
-  oauthButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 14,
-    alignItems: 'center',
-  },
-  oauthButtonText: {
-    color: '#11181C',
-    fontSize: 16,
-    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
@@ -386,8 +430,13 @@ const styles = StyleSheet.create({
     color: '#687076',
     fontSize: 14,
   },
+  footerLink: {
+    minHeight: 44, // WCAG minimum touch target
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
   linkText: {
-    color: '#0a7ea4',
+    color: '#2B4C8F',
     fontSize: 14,
     fontWeight: '600',
   },

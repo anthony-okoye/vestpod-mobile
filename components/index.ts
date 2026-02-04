@@ -43,3 +43,13 @@ export type { ErrorDisplayProps } from './ErrorDisplay';
 export { NetworkError } from './NetworkError';
 export type { NetworkErrorProps } from './NetworkError';
 export { OfflineIndicator } from './OfflineIndicator';
+
+// Auth components
+export {
+  GradientBackground,
+  AppLogo,
+  BrandHeader,
+  FormCard,
+  OAuthButton,
+} from './auth';
+export type { OAuthButtonProps } from './auth';
