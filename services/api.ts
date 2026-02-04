@@ -500,6 +500,21 @@ export const profileService = {
 
     return data.publicUrl;
   },
+
+  /**
+   * Save push notification token
+   * Stores the Expo push token in user_profiles for push notifications
+   */
+  async savePushToken(token: string) {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update({ push_token: token })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
+  },
 };
 
 // ============================================================================

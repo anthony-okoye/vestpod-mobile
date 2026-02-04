@@ -7,11 +7,17 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
 import { StackScreenProps } from '@react-navigation/stack';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { CompositeScreenProps } from '@react-navigation/native';
 
 // Root Stack Navigator
 export type RootStackParamList = {
   Auth: NavigatorScreenParams<AuthStackParamList>;
   Main: NavigatorScreenParams<MainTabParamList>;
+  AddAsset: NavigatorScreenParams<AddAssetStackParamList>;
+  AssetDetailView: { assetId: string; portfolioId: string };
+  CreateAlert: { preselectedAssetId?: string } | undefined;
+  EditProfile: undefined;
+  AIChat: undefined;
 };
 
 // Auth Stack Navigator
@@ -31,6 +37,19 @@ export type MainTabParamList = {
   Profile: undefined;
 };
 
+// Add Asset Stack Navigator
+export type AddAssetStackParamList = {
+  AssetTypeSelection: { portfolioId: string };
+  TickerSearch: { portfolioId: string; assetType: string };
+  AssetDetails: {
+    portfolioId: string;
+    assetType: string;
+    symbol?: string;
+    name?: string;
+    currentPrice?: number;
+  };
+};
+
 // Screen Props Types
 export type RootStackScreenProps<T extends keyof RootStackParamList> = StackScreenProps<
   RootStackParamList,
@@ -42,9 +61,14 @@ export type AuthStackScreenProps<T extends keyof AuthStackParamList> = StackScre
   T
 >;
 
-export type MainTabScreenProps<T extends keyof MainTabParamList> = BottomTabScreenProps<
-  MainTabParamList,
-  T
+export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, T>,
+  RootStackScreenProps<keyof RootStackParamList>
+>;
+
+export type AddAssetStackScreenProps<T extends keyof AddAssetStackParamList> = CompositeScreenProps<
+  StackScreenProps<AddAssetStackParamList, T>,
+  RootStackScreenProps<keyof RootStackParamList>
 >;
 
 // Declare global navigation types for TypeScript

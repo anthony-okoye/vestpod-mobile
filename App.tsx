@@ -3,25 +3,50 @@
  * Main App Component
  * 
  * Entry point for the Investment Portfolio Tracker mobile app
- * Sets up Redux store, navigation, theme, and auto-login
+ * Sets up Redux store, navigation, theme, auto-login, and push notifications
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Provider } from 'react-redux';
-import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme, NavigationContainerRef } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from './hooks/use-color-scheme';
 import RootNavigator from './navigation/RootNavigator';
 import { store } from './store';
 import { useAppSelector, useAppDispatch } from './store/hooks';
 import { setCredentials, clearCredentials, setLoading } from './store/slices/authSlice';
 import { supabase } from './services/supabase';
 import { secureStorage } from './services/secureStorage';
+import { configureNotifications, notificationService } from './services/notifications';
+import { useNotifications } from './hooks/useNotifications';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { useTheme } from './hooks/useTheme';
+import type { RootStackParamList } from './navigation/types';
 
 function AppContent() {
-  const colorScheme = useColorScheme();
+  const { isDarkMode } = useTheme();
   const dispatch = useAppDispatch();
   const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+
+  // Initialize notifications hook with navigation ref for use outside NavigationContainer
+  const { setup: setupNotifications } = useNotifications({
+    autoSetup: false,
+    autoNavigate: true,
+    navigationRef,
+  });
+
+  // Configure notifications on app start
+  useEffect(() => {
+    configureNotifications();
+    notificationService.configureAndroidChannel();
+  }, []);
+
+  // Setup push notifications after user signs in
+  useEffect(() => {
+    if (isAuthenticated) {
+      setupNotifications();
+    }
+  }, [isAuthenticated, setupNotifications]);
 
   useEffect(() => {
     initializeAuth();
@@ -117,10 +142,10 @@ function AppContent() {
 
   return (
     <>
-      <NavigationContainer theme={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <NavigationContainer ref={navigationRef} theme={isDarkMode ? DarkTheme : DefaultTheme}>
         <RootNavigator isAuthenticated={isAuthenticated} />
       </NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
     </>
   );
 }
@@ -128,7 +153,9 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </Provider>
   );
 }

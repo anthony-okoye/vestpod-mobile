@@ -15,10 +15,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { MainTabScreenProps } from '@/navigation/types';
-import { portfolioService, assetService } from '@/services/api';
+import { portfolioService, assetService, subscriptionService } from '@/services/api';
 import PortfolioLineChart from '@/components/charts/PortfolioLineChart';
 
 type Props = MainTabScreenProps<'Dashboard'>;
@@ -33,6 +32,7 @@ interface Asset {
   current_price: number;
   purchase_price: number;
   quantity: number;
+  metadata?: Record<string, any>;
 }
 
 interface PortfolioSummary {
@@ -41,6 +41,12 @@ interface PortfolioSummary {
   todayChangePercent: number;
   bestPerformer: { name: string; change: number; changePercent: number } | null;
   worstPerformer: { name: string; change: number; changePercent: number } | null;
+}
+
+interface UpcomingMaturity {
+  name: string;
+  maturityDate: string;
+  daysUntil: number;
 }
 
 interface AllocationItem {
@@ -59,6 +65,7 @@ const ASSET_TYPE_COLORS: Record<string, string> = {
   other: '#795548',
 };
 
+
 export default function DashboardScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -72,11 +79,35 @@ export default function DashboardScreen({ navigation }: Props) {
     worstPerformer: null,
   });
   const [allocation, setAllocation] = useState<AllocationItem[]>([]);
+  const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: number }[]>([]);
+  const [upcomingMaturity, setUpcomingMaturity] = useState<UpcomingMaturity | null>(null);
+  const [riskScore, setRiskScore] = useState<number | null>(null);
+  const [isPremium, setIsPremium] = useState(false);
 
   const timePeriods: TimePeriod[] = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
 
-  // Add state for price history
-const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: number }[]>([]);
+  const calculateUpcomingMaturity = (assets: Asset[]): UpcomingMaturity | null => {
+    const now = new Date();
+    let nearest: UpcomingMaturity | null = null;
+
+    assets.forEach((asset) => {
+      const metadata = asset.metadata as Record<string, any> | undefined;
+      if (metadata?.maturity_date) {
+        const maturityDate = new Date(metadata.maturity_date);
+        const daysUntil = Math.ceil((maturityDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntil > 0 && (!nearest || daysUntil < nearest.daysUntil)) {
+          nearest = {
+            name: asset.name,
+            maturityDate: metadata.maturity_date,
+            daysUntil,
+          };
+        }
+      }
+    });
+
+    return nearest;
+  };
 
   const calculateSummary = (assets: Asset[]): PortfolioSummary => {
     if (assets.length === 0) {
@@ -142,9 +173,14 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
     }));
   };
 
+
   const loadDashboardData = useCallback(async () => {
     try {
       setError(null);
+
+      // Check premium status
+      const premium = await subscriptionService.isPremium();
+      setIsPremium(premium);
 
       const portfolios = await portfolioService.getPortfolios();
       
@@ -156,14 +192,21 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
 
       const calculatedSummary = calculateSummary(allAssets);
       const calculatedAllocation = calculateAllocation(allAssets);
+      const calculatedMaturity = calculateUpcomingMaturity(allAssets);
+      
+      // Mock risk score (would come from AI analysis in production)
+      const mockRiskScore = premium ? Math.floor(Math.random() * 40) + 30 : null;
+      
       const mockPriceHistory = Array.from({ length: 30 }, (_, i) => ({
-          timestamp: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
-          value: calculatedSummary.totalValue * (0.9 + Math.random() * 0.2),
-        }));
-        setPriceHistory(mockPriceHistory);
-
+        timestamp: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
+        value: calculatedSummary.totalValue * (0.9 + Math.random() * 0.2),
+      }));
+      
+      setPriceHistory(mockPriceHistory);
       setSummary(calculatedSummary);
       setAllocation(calculatedAllocation);
+      setUpcomingMaturity(calculatedMaturity);
+      setRiskScore(mockRiskScore);
     } catch (err) {
       setError('Failed to load dashboard data. Please try again.');
     } finally {
@@ -214,6 +257,7 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
       </View>
     );
   }
+
 
   return (
     <ScrollView
@@ -270,7 +314,7 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
         ))}
       </View>
 
-      {/* Chart Placeholder */}
+      {/* Portfolio Line Chart */}
       <PortfolioLineChart data={priceHistory} timePeriod={selectedPeriod} />
 
       {/* Asset Allocation */}
@@ -295,7 +339,8 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
         </View>
       </View>
 
-      {/* Quick Stats */}
+
+      {/* Quick Stats Cards */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Quick Stats</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -305,7 +350,9 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
               <Text style={styles.statCardLabel}>Best Performer</Text>
               {summary.bestPerformer ? (
                 <>
-                  <Text style={styles.statCardValue}>{summary.bestPerformer.name}</Text>
+                  <Text style={styles.statCardValue} numberOfLines={1}>
+                    {summary.bestPerformer.name}
+                  </Text>
                   <Text style={[styles.statCardChange, styles.positive]}>
                     {formatPercent(summary.bestPerformer.changePercent)}
                   </Text>
@@ -320,7 +367,9 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
               <Text style={styles.statCardLabel}>Worst Performer</Text>
               {summary.worstPerformer ? (
                 <>
-                  <Text style={styles.statCardValue}>{summary.worstPerformer.name}</Text>
+                  <Text style={styles.statCardValue} numberOfLines={1}>
+                    {summary.worstPerformer.name}
+                  </Text>
                   <Text style={[styles.statCardChange, styles.negative]}>
                     {formatPercent(summary.worstPerformer.changePercent)}
                   </Text>
@@ -330,11 +379,43 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
               )}
             </View>
 
-            {/* Total Assets */}
-            <View style={[styles.statCard, styles.statCardBlue]}>
-              <Text style={styles.statCardLabel}>Total Assets</Text>
-              <Text style={styles.statCardValue}>{allocation.length}</Text>
-              <Text style={styles.statCardSubtext}>asset types</Text>
+            {/* Upcoming Maturity */}
+            <View style={[styles.statCard, styles.statCardOrange]}>
+              <Text style={styles.statCardLabel}>Upcoming Maturity</Text>
+              {upcomingMaturity ? (
+                <>
+                  <Text style={styles.statCardValue} numberOfLines={1}>
+                    {upcomingMaturity.name}
+                  </Text>
+                  <Text style={styles.statCardSubtext}>
+                    {upcomingMaturity.daysUntil} days
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.statCardEmpty}>None</Text>
+              )}
+            </View>
+
+            {/* Risk Score (Premium) */}
+            <View style={[styles.statCard, styles.statCardPurple]}>
+              <View style={styles.statCardHeader}>
+                <Text style={styles.statCardLabel}>Risk Score</Text>
+                {!isPremium && (
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>PRO</Text>
+                  </View>
+                )}
+              </View>
+              {isPremium && riskScore !== null ? (
+                <>
+                  <Text style={styles.statCardValue}>{riskScore}/100</Text>
+                  <Text style={styles.statCardSubtext}>
+                    {riskScore < 40 ? 'Low Risk' : riskScore < 70 ? 'Moderate' : 'High Risk'}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.statCardEmpty}>Upgrade to view</Text>
+              )}
             </View>
           </View>
         </ScrollView>
@@ -342,6 +423,7 @@ const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: num
     </ScrollView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -452,25 +534,6 @@ const styles = StyleSheet.create({
   periodButtonTextActive: {
     color: '#FFFFFF',
   },
-  chartPlaceholder: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 40,
-    marginBottom: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 200,
-  },
-  chartPlaceholderText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#687076',
-  },
-  chartPlaceholderSubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 8,
-  },
   section: {
     marginBottom: 16,
   },
@@ -529,8 +592,11 @@ const styles = StyleSheet.create({
   statCardRed: {
     borderLeftColor: '#DC2626',
   },
-  statCardBlue: {
-    borderLeftColor: '#0a7ea4',
+  statCardOrange: {
+    borderLeftColor: '#F59E0B',
+  },
+  statCardPurple: {
+    borderLeftColor: '#8B5CF6',
   },
   statCardLabel: {
     fontSize: 12,
@@ -554,5 +620,22 @@ const styles = StyleSheet.create({
   statCardEmpty: {
     fontSize: 14,
     color: '#9CA3AF',
+  },
+  statCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  premiumBadge: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  premiumBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 });
