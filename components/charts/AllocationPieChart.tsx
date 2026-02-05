@@ -3,7 +3,7 @@
  * Asset Allocation Pie Chart Component
  * 
  * Donut chart showing asset allocation by type
- * Requirements: 6
+ * Requirements: 6, 9.1, 9.2, 9.3
  */
 
 import React from 'react';
@@ -26,7 +26,11 @@ interface AllocationPieChartProps {
 export default function AllocationPieChart({ data }: AllocationPieChartProps) {
   if (!data || data.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View 
+        style={styles.emptyContainer}
+        accessible={true}
+        accessibilityLabel="Asset allocation chart with no data available"
+      >
         <Text style={styles.emptyText}>No allocation data available</Text>
       </View>
     );
@@ -49,32 +53,63 @@ export default function AllocationPieChart({ data }: AllocationPieChartProps) {
 
   const formatCurrency = (value: number): string => {
     if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
+      return `${(value / 1000000).toFixed(1)}M`;
     }
     if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}K`;
+      return `${(value / 1000).toFixed(1)}K`;
     }
-    return `$${value.toFixed(0)}`;
+    return `${value.toFixed(0)}`;
   };
 
+  // Build allocation summary for accessibility
+  const allocationSummary = data
+    .map((item) => `${item.type.replace('_', ' ')} ${item.percentage.toFixed(1)} percent`)
+    .join(', ');
+
   return (
-    <View style={styles.container}>
-      <PieChart
-        data={chartData}
-        width={screenWidth - 48}
-        height={200}
-        chartConfig={chartConfig}
-        accessor="population"
-        backgroundColor="transparent"
-        paddingLeft="15"
-        absolute={false}
-      />
+    <View 
+      style={styles.container}
+      accessible={true}
+      accessibilityRole="none"
+      accessibilityLabel={`Asset allocation pie chart showing ${data.length} asset types`}
+      accessibilityHint="Shows portfolio distribution across asset types"
+    >
+      <View
+        accessible={true}
+        accessibilityRole="image"
+        accessibilityLabel={`Pie chart showing: ${allocationSummary}`}
+      >
+        <PieChart
+          data={chartData}
+          width={screenWidth - 48}
+          height={200}
+          chartConfig={chartConfig}
+          accessor="population"
+          backgroundColor="transparent"
+          paddingLeft="15"
+          absolute={false}
+        />
+      </View>
       
       {/* Custom Legend */}
-      <View style={styles.legend}>
+      <View 
+        style={styles.legend}
+        accessible={true}
+        accessibilityRole="list"
+        accessibilityLabel="Asset allocation breakdown"
+      >
         {data.map((item) => (
-          <View key={item.type} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+          <View 
+            key={item.type} 
+            style={styles.legendItem}
+            accessible={true}
+            accessibilityRole="text"
+            accessibilityLabel={`${item.type.replace('_', ' ')}: ${formatCurrency(item.value)}, ${item.percentage.toFixed(1)} percent of portfolio`}
+          >
+            <View 
+              style={[styles.legendDot, { backgroundColor: item.color }]}
+              accessibilityElementsHidden={true}
+            />
             <View style={styles.legendTextContainer}>
               <Text style={styles.legendLabel}>
                 {item.type.replace('_', ' ').toUpperCase()}

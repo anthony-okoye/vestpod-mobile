@@ -28,11 +28,11 @@ export type AuthStackParamList = {
 };
 
 // Main Tab Navigator
+// Updated: Removed Assets and Alerts tabs per home-screen-redesign requirements
+// Assets can be accessed via FAB, Alerts via Profile screen
 export type MainTabParamList = {
   Dashboard: undefined;
   Portfolio: undefined;
-  Assets: undefined;
-  Alerts: undefined;
   Insights: undefined;
   Profile: undefined;
 };

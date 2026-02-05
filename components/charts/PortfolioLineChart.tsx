@@ -27,7 +27,11 @@ export default function PortfolioLineChart({ data, timePeriod }: PortfolioLineCh
 
   if (!data || data.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View 
+        style={styles.emptyContainer}
+        accessible={true}
+        accessibilityLabel="Portfolio line chart with no price history available"
+      >
         <Text style={styles.emptyText}>No price history available</Text>
       </View>
     );
@@ -86,30 +90,54 @@ export default function PortfolioLineChart({ data, timePeriod }: PortfolioLineCh
     }).format(value);
   };
 
+  // Calculate trend for accessibility
+  const displayData = data.slice(-7);
+  const trendDirection = displayData.length >= 2 
+    ? (displayData[displayData.length - 1].value >= displayData[0].value ? 'upward' : 'downward')
+    : 'neutral';
+
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      accessible={true}
+      accessibilityRole="none"
+      accessibilityLabel={`Portfolio line chart for ${timePeriod} period showing ${trendDirection} trend`}
+      accessibilityHint="Interactive chart. Tap on data points to see specific values"
+    >
       {selectedPoint && (
-        <View style={styles.tooltip}>
+        <View 
+          style={styles.tooltip}
+          accessible={true}
+          accessibilityRole="alert"
+          accessibilityLabel={`Selected point: ${formatCurrency(selectedPoint.value)} on ${selectedPoint.date}`}
+          accessibilityLiveRegion="polite"
+        >
           <Text style={styles.tooltipValue}>{formatCurrency(selectedPoint.value)}</Text>
           <Text style={styles.tooltipDate}>{selectedPoint.date}</Text>
         </View>
       )}
-      <LineChart
-        data={chartData}
-        width={screenWidth - 48}
-        height={200}
-        chartConfig={chartConfig}
-        bezier
-        style={styles.chart}
-        onDataPointClick={handleDataPointClick}
-        withInnerLines={true}
-        withOuterLines={false}
-        withVerticalLines={false}
-        withHorizontalLines={true}
-        withVerticalLabels={true}
-        withHorizontalLabels={true}
-        fromZero={false}
-      />
+      <View
+        accessible={true}
+        accessibilityRole="image"
+        accessibilityLabel={`Line chart showing portfolio value over time with ${trendDirection} trend`}
+      >
+        <LineChart
+          data={chartData}
+          width={screenWidth - 48}
+          height={200}
+          chartConfig={chartConfig}
+          bezier
+          style={styles.chart}
+          onDataPointClick={handleDataPointClick}
+          withInnerLines={true}
+          withOuterLines={false}
+          withVerticalLines={false}
+          withHorizontalLines={true}
+          withVerticalLabels={true}
+          withHorizontalLabels={true}
+          fromZero={false}
+        />
+      </View>
     </View>
   );
 }

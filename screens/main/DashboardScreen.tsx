@@ -1,28 +1,36 @@
 // mobile/screens/main/DashboardScreen.tsx
 /**
- * Dashboard Screen
+ * Dashboard Screen - Redesigned
  * 
- * Displays portfolio overview with total value, performance, and quick stats
- * Requirements: 6
+ * Displays portfolio overview with gradient header, performance chart,
+ * asset allocation, performer cards, and stats cards.
+ * Requirements: 1.1-1.8, 2.1-2.8, 3.1-3.6, 4.1-4.9, 5.1-5.11, 8.1-8.5, 10.2-10.5
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Text,
+  TouchableOpacity,
 } from 'react-native';
 import { MainTabScreenProps } from '@/navigation/types';
 import { portfolioService, assetService, subscriptionService } from '@/services/api';
-import PortfolioLineChart from '@/components/charts/PortfolioLineChart';
+import {
+  DashboardHeader,
+  PerformanceCard,
+  AllocationCard,
+  PerformerCard,
+  StatsCard,
+  getAssetTypeColor,
+} from '@/components/dashboard';
+import type { TimePeriod, AllocationItem } from '@/components/dashboard';
+import { Colors, Spacing } from '@/constants/theme';
 
 type Props = MainTabScreenProps<'Dashboard'>;
-
-type TimePeriod = '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL';
 
 interface Asset {
   id: string;
@@ -37,42 +45,131 @@ interface Asset {
 
 interface PortfolioSummary {
   totalValue: number;
+  totalInvested: number;
   todayChange: number;
   todayChangePercent: number;
-  bestPerformer: { name: string; change: number; changePercent: number } | null;
-  worstPerformer: { name: string; change: number; changePercent: number } | null;
+  bestPerformer: { name: string; changePercent: number } | null;
+  worstPerformer: { name: string; changePercent: number } | null;
 }
 
-interface UpcomingMaturity {
-  name: string;
-  maturityDate: string;
-  daysUntil: number;
+/**
+ * Calculates portfolio summary from assets
+ * Requirements: 10.2, 10.3, 10.4
+ */
+export function calculateSummary(assets: Asset[]): PortfolioSummary {
+  if (assets.length === 0) {
+    return {
+      totalValue: 0,
+      totalInvested: 0,
+      todayChange: 0,
+      todayChangePercent: 0,
+      bestPerformer: null,
+      worstPerformer: null,
+    };
+  }
+
+  let totalValue = 0;
+  let totalInvested = 0;
+  let bestPerformer: PortfolioSummary['bestPerformer'] = null;
+  let worstPerformer: PortfolioSummary['worstPerformer'] = null;
+
+  assets.forEach((asset) => {
+    const currentPrice = asset.current_price || asset.purchase_price;
+    const assetValue = currentPrice * asset.quantity;
+    const assetCost = asset.purchase_price * asset.quantity;
+    const changePercent = assetCost > 0 ? ((assetValue - assetCost) / assetCost) * 100 : 0;
+
+    totalValue += assetValue;
+    totalInvested += assetCost;
+
+    // Track best performer (highest percentage change)
+    if (!bestPerformer || changePercent > bestPerformer.changePercent) {
+      bestPerformer = { name: asset.name, changePercent };
+    }
+    // Track worst performer (lowest percentage change)
+    if (!worstPerformer || changePercent < worstPerformer.changePercent) {
+      worstPerformer = { name: asset.name, changePercent };
+    }
+  });
+
+  const todayChange = totalValue - totalInvested;
+  const todayChangePercent = totalInvested > 0 ? (todayChange / totalInvested) * 100 : 0;
+
+  return {
+    totalValue,
+    totalInvested,
+    todayChange,
+    todayChangePercent,
+    bestPerformer,
+    worstPerformer,
+  };
 }
 
-interface AllocationItem {
-  type: string;
-  value: number;
-  percentage: number;
-  color: string;
+/**
+ * Calculates asset allocation percentages by type
+ * Requirements: 10.5
+ */
+export function calculateAllocation(assets: Asset[]): AllocationItem[] {
+  const typeValues: Record<string, number> = {};
+  let totalValue = 0;
+
+  assets.forEach((asset) => {
+    const currentPrice = asset.current_price || asset.purchase_price;
+    const assetValue = currentPrice * asset.quantity;
+    const type = asset.asset_type || 'other';
+    typeValues[type] = (typeValues[type] || 0) + assetValue;
+    totalValue += assetValue;
+  });
+
+  return Object.entries(typeValues).map(([type, value]) => ({
+    type,
+    value,
+    percentage: totalValue > 0 ? (value / totalValue) * 100 : 0,
+    color: getAssetTypeColor(type),
+  }));
 }
 
-const ASSET_TYPE_COLORS: Record<string, string> = {
-  stock: '#4CAF50',
-  crypto: '#FF9800',
-  commodity: '#9C27B0',
-  real_estate: '#2196F3',
-  fixed_income: '#607D8B',
-  other: '#795548',
-};
+/**
+ * Calculates risk score based on portfolio composition
+ * Returns score from 0-10
+ */
+export function calculateRiskScore(allocation: AllocationItem[]): number {
+  if (allocation.length === 0) return 5;
 
+  // Risk weights by asset type (higher = riskier)
+  const riskWeights: Record<string, number> = {
+    crypto: 9,
+    stock: 6,
+    commodity: 5,
+    real_estate: 4,
+    fixed_income: 2,
+    other: 5,
+  };
+
+  let weightedRisk = 0;
+  let totalPercentage = 0;
+
+  allocation.forEach((item) => {
+    const weight = riskWeights[item.type.toLowerCase()] || 5;
+    weightedRisk += weight * item.percentage;
+    totalPercentage += item.percentage;
+  });
+
+  if (totalPercentage === 0) return 5;
+  
+  // Normalize to 0-10 scale
+  return Math.round(weightedRisk / totalPercentage);
+}
 
 export default function DashboardScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
+  const [userName, setUserName] = useState('User');
   const [summary, setSummary] = useState<PortfolioSummary>({
     totalValue: 0,
+    totalInvested: 0,
     todayChange: 0,
     todayChangePercent: 0,
     bestPerformer: null,
@@ -80,99 +177,8 @@ export default function DashboardScreen({ navigation }: Props) {
   });
   const [allocation, setAllocation] = useState<AllocationItem[]>([]);
   const [priceHistory, setPriceHistory] = useState<{ timestamp: string; value: number }[]>([]);
-  const [upcomingMaturity, setUpcomingMaturity] = useState<UpcomingMaturity | null>(null);
-  const [riskScore, setRiskScore] = useState<number | null>(null);
+  const [riskScore, setRiskScore] = useState<number>(5);
   const [isPremium, setIsPremium] = useState(false);
-
-  const timePeriods: TimePeriod[] = ['1D', '1W', '1M', '3M', '1Y', 'ALL'];
-
-  const calculateUpcomingMaturity = (assets: Asset[]): UpcomingMaturity | null => {
-    const now = new Date();
-    let nearest: UpcomingMaturity | null = null;
-
-    assets.forEach((asset) => {
-      const metadata = asset.metadata as Record<string, any> | undefined;
-      if (metadata?.maturity_date) {
-        const maturityDate = new Date(metadata.maturity_date);
-        const daysUntil = Math.ceil((maturityDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (daysUntil > 0 && (!nearest || daysUntil < nearest.daysUntil)) {
-          nearest = {
-            name: asset.name,
-            maturityDate: metadata.maturity_date,
-            daysUntil,
-          };
-        }
-      }
-    });
-
-    return nearest;
-  };
-
-  const calculateSummary = (assets: Asset[]): PortfolioSummary => {
-    if (assets.length === 0) {
-      return {
-        totalValue: 0,
-        todayChange: 0,
-        todayChangePercent: 0,
-        bestPerformer: null,
-        worstPerformer: null,
-      };
-    }
-
-    let totalValue = 0;
-    let totalCost = 0;
-    let bestPerformer: PortfolioSummary['bestPerformer'] = null;
-    let worstPerformer: PortfolioSummary['worstPerformer'] = null;
-
-    assets.forEach((asset) => {
-      const assetValue = (asset.current_price || asset.purchase_price) * asset.quantity;
-      const assetCost = asset.purchase_price * asset.quantity;
-      const change = assetValue - assetCost;
-      const changePercent = assetCost > 0 ? (change / assetCost) * 100 : 0;
-
-      totalValue += assetValue;
-      totalCost += assetCost;
-
-      if (!bestPerformer || changePercent > bestPerformer.changePercent) {
-        bestPerformer = { name: asset.name, change, changePercent };
-      }
-      if (!worstPerformer || changePercent < worstPerformer.changePercent) {
-        worstPerformer = { name: asset.name, change, changePercent };
-      }
-    });
-
-    const todayChange = totalValue - totalCost;
-    const todayChangePercent = totalCost > 0 ? (todayChange / totalCost) * 100 : 0;
-
-    return {
-      totalValue,
-      todayChange,
-      todayChangePercent,
-      bestPerformer,
-      worstPerformer,
-    };
-  };
-
-  const calculateAllocation = (assets: Asset[]): AllocationItem[] => {
-    const typeValues: Record<string, number> = {};
-    let totalValue = 0;
-
-    assets.forEach((asset) => {
-      const assetValue = (asset.current_price || asset.purchase_price) * asset.quantity;
-      const type = asset.asset_type || 'other';
-      typeValues[type] = (typeValues[type] || 0) + assetValue;
-      totalValue += assetValue;
-    });
-
-    return Object.entries(typeValues).map(([type, value]) => ({
-      type,
-      value,
-      percentage: totalValue > 0 ? (value / totalValue) * 100 : 0,
-      color: ASSET_TYPE_COLORS[type] || ASSET_TYPE_COLORS.other,
-    }));
-  };
-
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -192,11 +198,9 @@ export default function DashboardScreen({ navigation }: Props) {
 
       const calculatedSummary = calculateSummary(allAssets);
       const calculatedAllocation = calculateAllocation(allAssets);
-      const calculatedMaturity = calculateUpcomingMaturity(allAssets);
+      const calculatedRiskScore = calculateRiskScore(calculatedAllocation);
       
-      // Mock risk score (would come from AI analysis in production)
-      const mockRiskScore = premium ? Math.floor(Math.random() * 40) + 30 : null;
-      
+      // Generate mock price history based on total value
       const mockPriceHistory = Array.from({ length: 30 }, (_, i) => ({
         timestamp: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
         value: calculatedSummary.totalValue * (0.9 + Math.random() * 0.2),
@@ -205,8 +209,7 @@ export default function DashboardScreen({ navigation }: Props) {
       setPriceHistory(mockPriceHistory);
       setSummary(calculatedSummary);
       setAllocation(calculatedAllocation);
-      setUpcomingMaturity(calculatedMaturity);
-      setRiskScore(mockRiskScore);
+      setRiskScore(calculatedRiskScore);
     } catch (err) {
       setError('Failed to load dashboard data. Please try again.');
     } finally {
@@ -219,29 +222,19 @@ export default function DashboardScreen({ navigation }: Props) {
     loadDashboardData();
   }, [loadDashboardData]);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     loadDashboardData();
-  };
+  }, [loadDashboardData]);
 
-  const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
-  const formatPercent = (value: number): string => {
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  };
+  const handlePeriodChange = useCallback((period: TimePeriod) => {
+    setSelectedPeriod(period);
+  }, []);
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
+        <ActivityIndicator size="large" color={Colors.light.tint} />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
       </View>
     );
@@ -251,391 +244,173 @@ export default function DashboardScreen({ navigation }: Props) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadDashboardData}>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={loadDashboardData}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading dashboard"
+        >
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-      }
-    >
-      {/* Total Portfolio Value */}
-      <View style={styles.valueCard}>
-        <Text style={styles.valueLabel}>Total Portfolio Value</Text>
-        <Text style={styles.valueAmount}>{formatCurrency(summary.totalValue)}</Text>
-        <View style={styles.changeRow}>
-          <Text
-            style={[
-              styles.changeAmount,
-              summary.todayChange >= 0 ? styles.positive : styles.negative,
-            ]}
-          >
-            {formatCurrency(Math.abs(summary.todayChange))}
-          </Text>
-          <Text
-            style={[
-              styles.changePercent,
-              summary.todayChangePercent >= 0 ? styles.positive : styles.negative,
-            ]}
-          >
-            {formatPercent(summary.todayChangePercent)}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.container}>
+      {/* Gradient Header with Portfolio Summary */}
+      <DashboardHeader
+        userName={userName}
+        totalValue={summary.totalValue}
+        dailyChange={summary.todayChange}
+        dailyChangePercent={summary.todayChangePercent}
+      />
 
-      {/* Time Period Selector */}
-      <View style={styles.periodSelector}>
-        {timePeriods.map((period) => (
-          <TouchableOpacity
-            key={period}
-            style={[
-              styles.periodButton,
-              selectedPeriod === period && styles.periodButtonActive,
-            ]}
-            onPress={() => setSelectedPeriod(period)}
-          >
-            <Text
-              style={[
-                styles.periodButtonText,
-                selectedPeriod === period && styles.periodButtonTextActive,
-              ]}
-            >
-              {period}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.light.tint}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Performance Card with Chart */}
+        <PerformanceCard
+          data={priceHistory}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={handlePeriodChange}
+        />
 
-      {/* Portfolio Line Chart */}
-      <PortfolioLineChart data={priceHistory} timePeriod={selectedPeriod} />
+        {/* Asset Allocation Card with Donut Chart */}
+        <AllocationCard data={allocation} />
 
-      {/* Asset Allocation */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Asset Allocation</Text>
-        <View style={styles.allocationContainer}>
-          {allocation.length > 0 ? (
-            allocation.map((item) => (
-              <View key={item.type} style={styles.allocationItem}>
-                <View style={[styles.allocationDot, { backgroundColor: item.color }]} />
-                <Text style={styles.allocationLabel}>
-                  {item.type.replace('_', ' ').toUpperCase()}
-                </Text>
-                <Text style={styles.allocationPercent}>
-                  {item.percentage.toFixed(1)}%
-                </Text>
-              </View>
-            ))
+        {/* Performer Cards Row (Best and Worst side-by-side) */}
+        <View style={styles.cardsRow}>
+          {summary.bestPerformer ? (
+            <PerformerCard
+              type="best"
+              assetName={summary.bestPerformer.name}
+              changePercent={summary.bestPerformer.changePercent}
+            />
           ) : (
-            <Text style={styles.emptyText}>No assets yet</Text>
+            <View style={[styles.emptyCard, { backgroundColor: Colors.light.cardBestPerformer }]}>
+              <Text style={styles.emptyCardLabel}>Best Performer</Text>
+              <Text style={styles.emptyCardText}>No data</Text>
+            </View>
+          )}
+          <View style={styles.cardSpacer} />
+          {summary.worstPerformer ? (
+            <PerformerCard
+              type="worst"
+              assetName={summary.worstPerformer.name}
+              changePercent={summary.worstPerformer.changePercent}
+            />
+          ) : (
+            <View style={[styles.emptyCard, { backgroundColor: Colors.light.cardWorstPerformer }]}>
+              <Text style={styles.emptyCardLabel}>Worst Performer</Text>
+              <Text style={styles.emptyCardText}>No data</Text>
+            </View>
           )}
         </View>
-      </View>
 
+        {/* Stats Cards Row (Total Invested and Risk Score side-by-side) */}
+        <View style={styles.cardsRow}>
+          <StatsCard
+            type="invested"
+            value={summary.totalInvested}
+            subtitle="Capital"
+          />
+          <View style={styles.cardSpacer} />
+          <StatsCard
+            type="risk"
+            value={riskScore}
+            subtitle=""
+          />
+        </View>
 
-      {/* Quick Stats Cards */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Stats</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.statsRow}>
-            {/* Best Performer */}
-            <View style={[styles.statCard, styles.statCardGreen]}>
-              <Text style={styles.statCardLabel}>Best Performer</Text>
-              {summary.bestPerformer ? (
-                <>
-                  <Text style={styles.statCardValue} numberOfLines={1}>
-                    {summary.bestPerformer.name}
-                  </Text>
-                  <Text style={[styles.statCardChange, styles.positive]}>
-                    {formatPercent(summary.bestPerformer.changePercent)}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statCardEmpty}>No data</Text>
-              )}
-            </View>
-
-            {/* Worst Performer */}
-            <View style={[styles.statCard, styles.statCardRed]}>
-              <Text style={styles.statCardLabel}>Worst Performer</Text>
-              {summary.worstPerformer ? (
-                <>
-                  <Text style={styles.statCardValue} numberOfLines={1}>
-                    {summary.worstPerformer.name}
-                  </Text>
-                  <Text style={[styles.statCardChange, styles.negative]}>
-                    {formatPercent(summary.worstPerformer.changePercent)}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statCardEmpty}>No data</Text>
-              )}
-            </View>
-
-            {/* Upcoming Maturity */}
-            <View style={[styles.statCard, styles.statCardOrange]}>
-              <Text style={styles.statCardLabel}>Upcoming Maturity</Text>
-              {upcomingMaturity ? (
-                <>
-                  <Text style={styles.statCardValue} numberOfLines={1}>
-                    {upcomingMaturity.name}
-                  </Text>
-                  <Text style={styles.statCardSubtext}>
-                    {upcomingMaturity.daysUntil} days
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statCardEmpty}>None</Text>
-              )}
-            </View>
-
-            {/* Risk Score (Premium) */}
-            <View style={[styles.statCard, styles.statCardPurple]}>
-              <View style={styles.statCardHeader}>
-                <Text style={styles.statCardLabel}>Risk Score</Text>
-                {!isPremium && (
-                  <View style={styles.premiumBadge}>
-                    <Text style={styles.premiumBadgeText}>PRO</Text>
-                  </View>
-                )}
-              </View>
-              {isPremium && riskScore !== null ? (
-                <>
-                  <Text style={styles.statCardValue}>{riskScore}/100</Text>
-                  <Text style={styles.statCardSubtext}>
-                    {riskScore < 40 ? 'Low Risk' : riskScore < 70 ? 'Moderate' : 'High Risk'}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statCardEmpty}>Upgrade to view</Text>
-              )}
-            </View>
-          </View>
-        </ScrollView>
-      </View>
-    </ScrollView>
+        {/* Bottom spacing for tab bar */}
+        <View style={styles.bottomSpacer} />
+      </ScrollView>
+    </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: Colors.light.backgroundSecondary,
   },
-  contentContainer: {
-    padding: 16,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: Spacing.xl,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: Colors.light.backgroundSecondary,
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: Spacing.md,
     fontSize: 16,
-    color: '#687076',
+    color: Colors.light.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 24,
+    backgroundColor: Colors.light.backgroundSecondary,
+    padding: Spacing.xl,
   },
   errorText: {
     fontSize: 16,
-    color: '#DC2626',
+    color: Colors.light.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: Spacing.base,
   },
   retryButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    backgroundColor: Colors.light.tint,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: Colors.light.buttonPrimaryText,
     fontSize: 16,
     fontWeight: '600',
   },
-  valueCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 16,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  valueLabel: {
-    fontSize: 14,
-    color: '#687076',
-    marginBottom: 8,
-  },
-  valueAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#11181C',
-    marginBottom: 8,
-  },
-  changeRow: {
+  cardsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    marginHorizontal: Spacing.base,
+    marginTop: Spacing.base,
   },
-  changeAmount: {
-    fontSize: 16,
-    fontWeight: '600',
+  cardSpacer: {
+    width: Spacing.md,
   },
-  changePercent: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  positive: {
-    color: '#059669',
-  },
-  negative: {
-    color: '#DC2626',
-  },
-  periodSelector: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  periodButton: {
+  emptyCard: {
     flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  periodButtonActive: {
-    backgroundColor: '#0a7ea4',
-  },
-  periodButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#687076',
-  },
-  periodButtonTextActive: {
-    color: '#FFFFFF',
-  },
-  section: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#11181C',
-    marginBottom: 12,
-  },
-  allocationContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: Spacing.base,
+    minHeight: 100,
+    justifyContent: 'center',
   },
-  allocationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  allocationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  allocationLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: '#11181C',
-  },
-  allocationPercent: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#687076',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    paddingVertical: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statCard: {
-    width: 150,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-  },
-  statCardGreen: {
-    borderLeftColor: '#059669',
-  },
-  statCardRed: {
-    borderLeftColor: '#DC2626',
-  },
-  statCardOrange: {
-    borderLeftColor: '#F59E0B',
-  },
-  statCardPurple: {
-    borderLeftColor: '#8B5CF6',
-  },
-  statCardLabel: {
+  emptyCardLabel: {
     fontSize: 12,
-    color: '#687076',
-    marginBottom: 8,
+    color: Colors.light.textSecondary,
+    marginBottom: Spacing.xs,
   },
-  statCardValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#11181C',
-    marginBottom: 4,
-  },
-  statCardChange: {
+  emptyCardText: {
     fontSize: 14,
-    fontWeight: '600',
+    color: Colors.light.textTertiary,
   },
-  statCardSubtext: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  statCardEmpty: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  statCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  premiumBadge: {
-    backgroundColor: '#8B5CF6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  premiumBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
+  bottomSpacer: {
+    height: Spacing['2xl'],
   },
 });

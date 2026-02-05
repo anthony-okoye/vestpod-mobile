@@ -88,6 +88,31 @@ export const Colors = {
     authCardShadow: 'rgba(0, 0, 0, 0.1)',
     authInputBackground: '#F5F5F5',
     authBrandText: '#FFFFFF',
+    
+    // Dashboard-specific colors
+    dashboardGradientStart: '#2B4C8F',
+    dashboardGradientEnd: '#1E3A6F',
+    dashboardHeaderText: '#FFFFFF',
+    dashboardHeaderSubtext: 'rgba(255, 255, 255, 0.8)',
+    
+    // Card backgrounds
+    cardBestPerformer: '#FEE2E2',
+    cardWorstPerformer: '#FEE2E2',
+    cardTotalInvested: '#DBEAFE',
+    cardRiskScore: '#FEF3C7',
+    
+    // Allocation chart colors
+    allocationStocks: '#1E3A8A',
+    allocationCrypto: '#059669',
+    allocationRealEstate: '#F59E0B',
+    allocationFixedIncome: '#8B5CF6',
+    allocationCommodities: '#EC4899',
+    
+    // Tab bar colors
+    tabBarActive: '#1E3A8A',
+    tabBarInactive: '#9CA3AF',
+    fabBackground: '#1E3A8A',
+    fabIcon: '#FFFFFF',
   },
   dark: {
     // Base colors
@@ -153,6 +178,31 @@ export const Colors = {
     authCardShadow: 'rgba(0, 0, 0, 0.1)',
     authInputBackground: '#F5F5F5',
     authBrandText: '#FFFFFF',
+    
+    // Dashboard-specific colors
+    dashboardGradientStart: '#2B4C8F',
+    dashboardGradientEnd: '#1E3A6F',
+    dashboardHeaderText: '#FFFFFF',
+    dashboardHeaderSubtext: 'rgba(255, 255, 255, 0.8)',
+    
+    // Card backgrounds
+    cardBestPerformer: '#FEE2E2',
+    cardWorstPerformer: '#FEE2E2',
+    cardTotalInvested: '#DBEAFE',
+    cardRiskScore: '#FEF3C7',
+    
+    // Allocation chart colors
+    allocationStocks: '#1E3A8A',
+    allocationCrypto: '#059669',
+    allocationRealEstate: '#F59E0B',
+    allocationFixedIncome: '#8B5CF6',
+    allocationCommodities: '#EC4899',
+    
+    // Tab bar colors
+    tabBarActive: '#60A5FA',
+    tabBarInactive: '#6B7280',
+    fabBackground: '#60A5FA',
+    fabIcon: '#151718',
   },
 };
 

@@ -157,16 +157,16 @@ export default function SignUpScreen({ navigation }: Props) {
     }
   };
 
-  const handleGitHubSignUp = async () => {
+  const handleAppleSignUp = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
+        provider: 'apple',
       });
       if (error) {
         setApiError(error.message);
       }
     } catch (error) {
-      setApiError('Failed to sign up with GitHub. Please try again.');
+      setApiError('Failed to sign up with Apple. Please try again.');
     }
   };
 
@@ -350,8 +350,8 @@ export default function SignUpScreen({ navigation }: Props) {
                 disabled={isLoading}
               />
               <OAuthButton
-                provider="github"
-                onPress={handleGitHubSignUp}
+                provider="apple"
+                onPress={handleAppleSignUp}
                 disabled={isLoading}
               />
             </View>

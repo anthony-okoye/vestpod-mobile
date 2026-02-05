@@ -38,8 +38,8 @@ describe('Auth Components Accessibility', () => {
       // OAuthButton Google: accessibilityLabel="Sign in with Google"
       expect('Sign in with Google').toBeTruthy();
       
-      // OAuthButton GitHub: accessibilityLabel="Sign in with GitHub"
-      expect('Sign in with GitHub').toBeTruthy();
+      // OAuthButton Apple: accessibilityLabel="Sign in with Apple"
+      expect('Sign in with Apple').toBeTruthy();
       
       // FormCard: accessibilityRole="form"
       expect('form').toBeTruthy();

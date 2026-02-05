@@ -53,3 +53,12 @@ export {
   OAuthButton,
 } from './auth';
 export type { OAuthButtonProps } from './auth';
+
+// Dashboard components
+export {
+  DashboardHeader,
+  getGreeting,
+  formatCurrency,
+  getChangeColor,
+} from './dashboard';
+export type { DashboardHeaderProps } from './dashboard';
