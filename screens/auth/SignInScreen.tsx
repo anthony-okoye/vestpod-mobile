@@ -325,10 +325,10 @@ const styles = StyleSheet.create({
   errorIcon: {
     fontSize: 16,
     marginRight: 8,
-    color: '#DC2626',
+    color: '#EF4444',
   },
   errorBannerText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'left',
     flex: 1,
@@ -356,10 +356,10 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderWidth: 1,
-    borderColor: '#DC2626',
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
   },
@@ -370,12 +370,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   forgotPasswordText: {
-    color: '#2B4C8F',
+    color: '#1E3A8A',
     fontSize: 14,
     fontWeight: '500',
   },
   button: {
-    backgroundColor: '#2B4C8F',
+    backgroundColor: '#1E3A8A',
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   linkText: {
-    color: '#2B4C8F',
+    color: '#1E3A8A',
     fontSize: 14,
     fontWeight: '600',
   },

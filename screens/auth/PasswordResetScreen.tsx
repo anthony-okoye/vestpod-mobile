@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   backButtonText: {
-    color: '#0a7ea4',
+    color: '#1E3A8A',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorBannerText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 14,
     textAlign: 'center',
   },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   successBannerText: {
-    color: '#059669',
+    color: '#10B981',
     fontSize: 14,
     textAlign: 'center',
   },
@@ -232,15 +232,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   inputError: {
-    borderColor: '#DC2626',
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
   },
   button: {
-    backgroundColor: '#0a7ea4',
+    backgroundColor: '#1E3A8A',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   linkText: {
-    color: '#0a7ea4',
+    color: '#1E3A8A',
     fontSize: 14,
     fontWeight: '600',
   },

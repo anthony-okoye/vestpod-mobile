@@ -13,11 +13,11 @@ const brandSecondary = '#6366F1';
 
 // Semantic colors (shared between themes)
 const semanticColors = {
-  success: '#059669',
+  success: '#10B981',
   successLight: '#10B981',
   warning: '#F59E0B',
   warningLight: '#FBBF24',
-  error: '#DC2626',
+  error: '#EF4444',
   errorLight: '#EF4444',
   info: '#3B82F6',
   infoLight: '#60A5FA',
@@ -30,7 +30,7 @@ export const Colors = {
     textSecondary: '#687076',
     textTertiary: '#9CA3AF',
     background: '#FFFFFF',
-    backgroundSecondary: '#F5F5F5',
+    backgroundSecondary: '#F9FAFB',
     backgroundTertiary: '#E5E7EB',
     tint: brandPrimary,
     icon: '#687076',
@@ -90,7 +90,7 @@ export const Colors = {
     authBrandText: '#FFFFFF',
     
     // Dashboard-specific colors
-    dashboardGradientStart: '#2B4C8F',
+    dashboardGradientStart: '#1E3A8A',
     dashboardGradientEnd: '#1E3A6F',
     dashboardHeaderText: '#FFFFFF',
     dashboardHeaderSubtext: 'rgba(255, 255, 255, 0.8)',
@@ -103,7 +103,7 @@ export const Colors = {
     
     // Allocation chart colors
     allocationStocks: '#1E3A8A',
-    allocationCrypto: '#059669',
+    allocationCrypto: '#10B981',
     allocationRealEstate: '#F59E0B',
     allocationFixedIncome: '#8B5CF6',
     allocationCommodities: '#EC4899',
@@ -172,7 +172,7 @@ export const Colors = {
     statusBar: 'light',
     
     // Auth-specific colors (same as light mode for consistency)
-    authGradientStart: '#2B4C8F',
+    authGradientStart: '#1E3A8A',
     authGradientEnd: '#1E3A6F',
     authCardBackground: '#FFFFFF',
     authCardShadow: 'rgba(0, 0, 0, 0.1)',
@@ -180,7 +180,7 @@ export const Colors = {
     authBrandText: '#FFFFFF',
     
     // Dashboard-specific colors
-    dashboardGradientStart: '#2B4C8F',
+    dashboardGradientStart: '#1E3A8A',
     dashboardGradientEnd: '#1E3A6F',
     dashboardHeaderText: '#FFFFFF',
     dashboardHeaderSubtext: 'rgba(255, 255, 255, 0.8)',
@@ -193,7 +193,7 @@ export const Colors = {
     
     // Allocation chart colors
     allocationStocks: '#1E3A8A',
-    allocationCrypto: '#059669',
+    allocationCrypto: '#10B981',
     allocationRealEstate: '#F59E0B',
     allocationFixedIncome: '#8B5CF6',
     allocationCommodities: '#EC4899',
