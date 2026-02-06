@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Alert,
 } from 'react-native';
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -26,10 +27,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FABButton } from '@/components/navigation/FABButton';
+import { useAppSelector } from '@/store/hooks';
 
 // Screens
 import DashboardScreen from '@/screens/main/DashboardScreen';
-import PortfolioScreen from '@/screens/main/PortfolioScreen';
+import PortfolioStack from './PortfolioStack';
 import InsightsScreen from '@/screens/main/InsightsScreen';
 import ProfileScreen from '@/screens/main/ProfileScreen';
 
@@ -49,13 +51,28 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const rootNavigation = useNavigation<RootNavProp>();
+  
+  // Get portfolios from Redux state
+  const { portfolios, selectedPortfolioId } = useAppSelector((state) => state.portfolio);
 
   const handleFABPress = () => {
-    // Navigate to Add Asset flow with a default portfolio
-    // The actual portfolioId will be selected in the AssetTypeSelection screen
+    // Get the portfolio ID to use (selected or first available)
+    const portfolioId = selectedPortfolioId || portfolios[0]?.id;
+    
+    if (!portfolioId) {
+      Alert.alert(
+        'No Portfolio',
+        'Please create a portfolio first before adding assets.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
+    // Navigate to Add Asset flow with the actual portfolio ID
+    // Uses root navigation to work with nested Portfolio stack
     rootNavigation.navigate('AddAsset', {
       screen: 'AssetTypeSelection',
-      params: { portfolioId: 'default' },
+      params: { portfolioId },
     });
   };
 
@@ -168,7 +185,7 @@ export default function MainTabs() {
       />
       <Tab.Screen
         name="Portfolio"
-        component={PortfolioScreen}
+        component={PortfolioStack}
         options={{
           tabBarAccessibilityLabel: 'Portfolio tab',
         }}

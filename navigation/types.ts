@@ -27,12 +27,18 @@ export type AuthStackParamList = {
   PasswordReset: undefined;
 };
 
+// Portfolio Stack Navigator
+export type PortfolioStackParamList = {
+  PortfolioList: undefined;
+  PortfolioDetail: { portfolioId: string; portfolioName: string };
+};
+
 // Main Tab Navigator
 // Updated: Removed Assets and Alerts tabs per home-screen-redesign requirements
 // Assets can be accessed via FAB, Alerts via Profile screen
 export type MainTabParamList = {
   Dashboard: undefined;
-  Portfolio: undefined;
+  Portfolio: NavigatorScreenParams<PortfolioStackParamList>;
   Insights: undefined;
   Profile: undefined;
 };
@@ -70,6 +76,11 @@ export type MainTabScreenProps<T extends keyof MainTabParamList> = CompositeScre
 export type AddAssetStackScreenProps<T extends keyof AddAssetStackParamList> = CompositeScreenProps<
   StackScreenProps<AddAssetStackParamList, T>,
   RootStackScreenProps<keyof RootStackParamList>
+>;
+
+export type PortfolioStackScreenProps<T extends keyof PortfolioStackParamList> = CompositeScreenProps<
+  StackScreenProps<PortfolioStackParamList, T>,
+  MainTabScreenProps<keyof MainTabParamList>
 >;
 
 // Declare global navigation types for TypeScript

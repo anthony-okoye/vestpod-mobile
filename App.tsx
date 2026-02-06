@@ -14,8 +14,10 @@ import RootNavigator from './navigation/RootNavigator';
 import { store } from './store';
 import { useAppSelector, useAppDispatch } from './store/hooks';
 import { setCredentials, clearCredentials, setLoading } from './store/slices/authSlice';
+import { setPortfolios, selectPortfolio } from './store/slices/portfolioSlice';
 import { supabase } from './services/supabase';
 import { secureStorage } from './services/secureStorage';
+import { portfolioService } from './services/api';
 import { configureNotifications, notificationService } from './services/notifications';
 import { useNotifications } from './hooks/useNotifications';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -51,6 +53,13 @@ function AppContent() {
   useEffect(() => {
     initializeAuth();
   }, []);
+
+  // Initialize portfolios when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      initializePortfolios();
+    }
+  }, [isAuthenticated, isLoading]);
 
   const initializeAuth = async () => {
     dispatch(setLoading(true));
@@ -93,6 +102,35 @@ function AppContent() {
     } catch (error) {
       await secureStorage.clearSession();
       dispatch(clearCredentials());
+    }
+  };
+
+  const initializePortfolios = async () => {
+    try {
+      // Fetch existing portfolios
+      const portfolios = await portfolioService.getPortfolios();
+      
+      if (!portfolios || portfolios.length === 0) {
+        // No portfolios exist, create default "My Portfolio"
+        const defaultPortfolio = await portfolioService.createPortfolio('My Portfolio');
+        
+        // Update Redux store with the new portfolio
+        dispatch(setPortfolios([defaultPortfolio]));
+        dispatch(selectPortfolio(defaultPortfolio.id));
+      } else {
+        // Portfolios exist, load them into Redux
+        dispatch(setPortfolios(portfolios));
+        
+        // Select first portfolio if none is currently selected
+        const currentSelectedId = store.getState().portfolio.selectedPortfolioId;
+        if (!currentSelectedId) {
+          dispatch(selectPortfolio(portfolios[0].id));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to initialize portfolios:', error);
+      // Don't throw - allow app to continue even if portfolio initialization fails
+      // User can manually create portfolios later
     }
   };
 

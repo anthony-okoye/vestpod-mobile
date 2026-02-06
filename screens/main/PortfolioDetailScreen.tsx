@@ -1,26 +1,29 @@
 /**
- * Portfolio Screen
+ * Portfolio Detail Screen
  * 
  * Displays list of assets in the selected portfolio with search and filter
- * Requirements: 2.1, 2.2, 2.3, 2.4
+ * Uses route params for portfolio selection instead of Redux
+ * Requirements: 3.3, 3.4, 3.5, 4.1, 4.2
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react';
 import {
   View,
   StyleSheet,
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
-import { MainTabScreenProps } from '@/navigation/types';
+import { Ionicons } from '@expo/vector-icons';
+import { PortfolioStackScreenProps } from '@/navigation/types';
 import { assetService } from '@/services/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { setAssets, setLoading, setError } from '@/store/slices/assetsSlice';
 import { PortfolioHeader, AssetCard, FloatingAddButton, EmptyState } from '@/components/portfolio';
 import { Colors } from '@/constants/theme';
 
-type Props = MainTabScreenProps<'Portfolio'>;
+type Props = PortfolioStackScreenProps<'PortfolioDetail'>;
 
 interface Asset {
   id: string;
@@ -49,29 +52,45 @@ const ASSET_TYPE_MAP: Record<string, string> = {
   'Other': 'other',
 };
 
-export default function PortfolioScreen({ navigation }: Props) {
+export default function PortfolioDetailScreen({ route, navigation }: Props) {
+  const { portfolioId, portfolioName } = route.params;
   const dispatch = useAppDispatch();
   const { assets, isLoading, error } = useAppSelector((state) => state.assets);
-  const { selectedPortfolioId } = useAppSelector((state) => state.portfolio);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('All');
 
+  // Configure header with portfolio name and back button
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      headerTitle: portfolioName,
+      headerLeft: () => (
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, portfolioName]);
+
   const loadAssets = useCallback(async () => {
-    if (!selectedPortfolioId) {
+    if (!portfolioId) {
       dispatch(setAssets([]));
       return;
     }
 
     try {
       dispatch(setLoading(true));
-      const data = await assetService.getAssets(selectedPortfolioId);
+      const data = await assetService.getAssets(portfolioId);
       dispatch(setAssets(data || []));
     } catch (err) {
       dispatch(setError('Failed to load assets'));
     }
-  }, [dispatch, selectedPortfolioId]);
+  }, [dispatch, portfolioId]);
 
   useEffect(() => {
     loadAssets();
@@ -84,19 +103,18 @@ export default function PortfolioScreen({ navigation }: Props) {
   };
 
   const handleAddAsset = () => {
-    if (!selectedPortfolioId) return;
-    navigation.getParent()?.navigate('AddAsset', {
+    if (!portfolioId) return;
+    navigation.getParent()?.getParent()?.navigate('AddAsset', {
       screen: 'AssetTypeSelection',
-      params: { portfolioId: selectedPortfolioId },
+      params: { portfolioId },
     });
   };
 
   const handleAssetPress = (assetId: string) => {
-    if (!selectedPortfolioId) return;
-    // Navigate to asset detail view screen
-    navigation.getParent()?.navigate('AssetDetailView', { 
+    if (!portfolioId) return;
+    navigation.getParent()?.getParent()?.navigate('AssetDetailView', { 
       assetId, 
-      portfolioId: selectedPortfolioId 
+      portfolioId 
     });
   };
 
@@ -235,5 +253,9 @@ const styles = StyleSheet.create({
   },
   listContentEmpty: {
     flexGrow: 1,
+  },
+  headerButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
 });
