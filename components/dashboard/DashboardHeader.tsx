@@ -48,7 +48,7 @@ export function formatCurrency(value: number): string {
 
 /**
  * Returns color based on value sign
- * Green (#059669) for positive/zero, Red (#DC2626) for negative
+ * Green (#10B981) for positive/zero, Red (#EF4444) for negative
  */
 export function getChangeColor(value: number): string {
   return value >= 0 ? Colors.light.success : Colors.light.error;

@@ -1,280 +1,220 @@
 /**
  * Portfolio Screen
  * 
- * Displays list of user portfolios with CRUD operations
- * Requirements: 2
+ * Displays list of assets in the selected portfolio with search and filter
+ * Requirements: 2.1, 2.2, 2.3, 2.4
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
-  TextInput,
-  Modal,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { MainTabScreenProps } from '@/navigation/types';
-import { portfolioService } from '@/services/api';
+import { assetService } from '@/services/api';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  setPortfolios,
-  addPortfolio,
-  updatePortfolio,
-  removePortfolio,
-  selectPortfolio,
-  setLoading,
-  setError,
-} from '@/store/slices/portfolioSlice';
+import { setAssets, setLoading, setError } from '@/store/slices/assetsSlice';
+import { PortfolioHeader, AssetCard, FloatingAddButton, EmptyState } from '@/components/portfolio';
+import { Colors } from '@/constants/theme';
 
 type Props = MainTabScreenProps<'Portfolio'>;
 
-interface Portfolio {
+interface Asset {
   id: string;
+  portfolio_id: string;
+  asset_type: string;
+  symbol?: string;
   name: string;
-  user_id: string;
-  total_value?: number;
+  quantity: number;
+  purchase_price: number;
+  purchase_date: string;
+  current_price?: number;
+  metadata?: Record<string, any>;
   created_at: string;
   updated_at: string;
 }
 
+const FILTER_OPTIONS = ['All', 'Stocks', 'Crypto', 'Commodities', 'Real Estate', 'Fixed Income', 'Other'];
+
+const ASSET_TYPE_MAP: Record<string, string> = {
+  'All': 'all',
+  'Stocks': 'stock',
+  'Crypto': 'crypto',
+  'Commodities': 'commodity',
+  'Real Estate': 'real_estate',
+  'Fixed Income': 'fixed_income',
+  'Other': 'other',
+};
+
 export default function PortfolioScreen({ navigation }: Props) {
   const dispatch = useAppDispatch();
-  const { portfolios, selectedPortfolioId, isLoading, error } = useAppSelector(
-    (state) => state.portfolio
-  );
+  const { assets, isLoading, error } = useAppSelector((state) => state.assets);
+  const { selectedPortfolioId } = useAppSelector((state) => state.portfolio);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingPortfolio, setEditingPortfolio] = useState<Portfolio | null>(null);
-  const [portfolioName, setPortfolioName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('All');
 
-  const loadPortfolios = useCallback(async () => {
-    try {
-      dispatch(setLoading(true));
-      const data = await portfolioService.getPortfolios();
-      dispatch(setPortfolios(data || []));
-    } catch (err) {
-      dispatch(setError('Failed to load portfolios'));
-    }
-  }, [dispatch]);
-
-  useEffect(() => {
-    loadPortfolios();
-  }, [loadPortfolios]);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadPortfolios();
-    setIsRefreshing(false);
-  };
-
-  const openCreateModal = () => {
-    setEditingPortfolio(null);
-    setPortfolioName('');
-    setModalVisible(true);
-  };
-
-  const openEditModal = (portfolio: Portfolio) => {
-    setEditingPortfolio(portfolio);
-    setPortfolioName(portfolio.name);
-    setModalVisible(true);
-  };
-
-  const handleSave = async () => {
-    if (!portfolioName.trim()) {
-      Alert.alert('Error', 'Portfolio name is required');
+  const loadAssets = useCallback(async () => {
+    if (!selectedPortfolioId) {
+      dispatch(setAssets([]));
       return;
     }
 
-    setIsSaving(true);
     try {
-      if (editingPortfolio) {
-        const updated = await portfolioService.updatePortfolio(
-          editingPortfolio.id,
-          portfolioName.trim()
-        );
-        dispatch(updatePortfolio(updated));
-      } else {
-        const created = await portfolioService.createPortfolio(portfolioName.trim());
-        dispatch(addPortfolio(created));
-      }
-      setModalVisible(false);
-      setPortfolioName('');
-      setEditingPortfolio(null);
+      dispatch(setLoading(true));
+      const data = await assetService.getAssets(selectedPortfolioId);
+      dispatch(setAssets(data || []));
     } catch (err) {
-      Alert.alert('Error', 'Failed to save portfolio');
-    } finally {
-      setIsSaving(false);
+      dispatch(setError('Failed to load assets'));
     }
+  }, [dispatch, selectedPortfolioId]);
+
+  useEffect(() => {
+    loadAssets();
+  }, [loadAssets]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadAssets();
+    setIsRefreshing(false);
   };
 
-  const handleDelete = (portfolio: Portfolio) => {
-    Alert.alert(
-      'Delete Portfolio',
-      `Are you sure you want to delete "${portfolio.name}"? This will also delete all assets in this portfolio.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await portfolioService.deletePortfolio(portfolio.id);
-              dispatch(removePortfolio(portfolio.id));
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete portfolio');
-            }
-          },
-        },
-      ]
-    );
+  const handleAddAsset = () => {
+    if (!selectedPortfolioId) return;
+    navigation.getParent()?.navigate('AddAsset', {
+      screen: 'AssetTypeSelection',
+      params: { portfolioId: selectedPortfolioId },
+    });
   };
 
-  const handleSelectPortfolio = (portfolioId: string) => {
-    dispatch(selectPortfolio(portfolioId));
+  const handleAssetPress = (assetId: string) => {
+    if (!selectedPortfolioId) return;
+    // Navigate to asset detail view screen
+    navigation.getParent()?.navigate('AssetDetailView', { 
+      assetId, 
+      portfolioId: selectedPortfolioId 
+    });
   };
 
-  const renderPortfolioItem = ({ item }: { item: Portfolio }) => {
-    const isSelected = item.id === selectedPortfolioId;
-
-    return (
-      <TouchableOpacity
-        style={[styles.portfolioCard, isSelected && styles.portfolioCardSelected]}
-        onPress={() => handleSelectPortfolio(item.id)}
-        onLongPress={() => openEditModal(item)}
-      >
-        <View style={styles.portfolioInfo}>
-          <View style={styles.portfolioHeader}>
-            <Text style={styles.portfolioName}>{item.name}</Text>
-            {isSelected && (
-              <View style={styles.selectedBadge}>
-                <Text style={styles.selectedBadgeText}>Active</Text>
-              </View>
-            )}
-          </View>
-          <Text style={styles.portfolioDate}>
-            Created {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={styles.portfolioActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => openEditModal(item)}
-          >
-            <Ionicons name="pencil" size={20} color="#687076" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleDelete(item)}
-          >
-            <Ionicons name="trash-outline" size={20} color="#DC2626" />
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    );
+  // Calculate asset display data
+  const calculateAssetValue = (asset: Asset): number => {
+    return (asset.current_price || asset.purchase_price) * asset.quantity;
   };
 
-  if (isLoading && portfolios.length === 0) {
+  const calculateChangePercent = (asset: Asset): number => {
+    const currentValue = calculateAssetValue(asset);
+    const costBasis = asset.purchase_price * asset.quantity;
+    return costBasis > 0 ? ((currentValue - costBasis) / costBasis) * 100 : 0;
+  };
+
+  const generateSparklineData = (asset: Asset): number[] => {
+    // Generate mock sparkline data based on change percent
+    // In production, this would come from price_history table
+    const changePercent = calculateChangePercent(asset);
+    const baseValue = 100;
+    const endValue = baseValue + changePercent;
+    
+    // Generate 5 data points with some variation
+    return [
+      baseValue,
+      baseValue + (changePercent * 0.2),
+      baseValue + (changePercent * 0.5),
+      baseValue + (changePercent * 0.7),
+      endValue,
+    ];
+  };
+
+  // Filter and search assets
+  const filteredAssets = useMemo(() => {
+    let result = [...assets];
+
+    // Apply type filter
+    if (selectedFilter !== 'All') {
+      const filterType = ASSET_TYPE_MAP[selectedFilter];
+      result = result.filter((asset) => asset.asset_type === filterType);
+    }
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (asset) =>
+          asset.name.toLowerCase().includes(query) ||
+          (asset.symbol && asset.symbol.toLowerCase().includes(query))
+      );
+    }
+
+    return result;
+  }, [assets, selectedFilter, searchQuery]);
+
+  // Transform assets for AssetCard component
+  const displayAssets = useMemo(() => {
+    return filteredAssets.map((asset) => ({
+      id: asset.id,
+      name: asset.name,
+      ticker: asset.symbol || asset.asset_type.toUpperCase(),
+      logo: asset.metadata?.logo,
+      quantity: asset.quantity,
+      totalValue: calculateAssetValue(asset),
+      changePercent: calculateChangePercent(asset),
+      sparklineData: generateSparklineData(asset),
+    }));
+  }, [filteredAssets]);
+
+  const renderAssetCard = ({ item }: { item: typeof displayAssets[0] }) => (
+    <AssetCard asset={item} onPress={handleAssetPress} />
+  );
+
+  if (isLoading && assets.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0a7ea4" />
-        <Text style={styles.loadingText}>Loading portfolios...</Text>
+        <ActivityIndicator size="large" color={Colors.light.buttonPrimary} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Portfolios</Text>
-        <TouchableOpacity style={styles.addButton} onPress={openCreateModal}>
-          <Ionicons name="add" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={loadPortfolios}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <PortfolioHeader
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedFilter={selectedFilter}
+        onFilterChange={setSelectedFilter}
+        filters={FILTER_OPTIONS}
+      />
 
       <FlatList
-        data={portfolios}
+        data={displayAssets}
         keyExtractor={(item) => item.id}
-        renderItem={renderPortfolioItem}
-        contentContainerStyle={styles.listContent}
+        renderItem={renderAssetCard}
+        contentContainerStyle={[
+          styles.listContent,
+          displayAssets.length === 0 && styles.listContentEmpty,
+        ]}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={Colors.light.buttonPrimary}
+          />
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="folder-open-outline" size={64} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No Portfolios Yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Create your first portfolio to start tracking your investments
-            </Text>
-            <TouchableOpacity style={styles.createButton} onPress={openCreateModal}>
-              <Text style={styles.createButtonText}>Create Portfolio</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            onAddAsset={handleAddAsset}
+            message={
+              searchQuery || selectedFilter !== 'All'
+                ? 'No assets match your search'
+                : 'No assets in this portfolio'
+            }
+          />
         }
       />
 
-      {/* Create/Edit Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {editingPortfolio ? 'Edit Portfolio' : 'Create Portfolio'}
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Portfolio Name"
-              value={portfolioName}
-              onChangeText={setPortfolioName}
-              autoFocus
-              maxLength={50}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setModalVisible(false)}
-                disabled={isSaving}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.saveButtonText}>
-                    {editingPortfolio ? 'Update' : 'Create'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <FloatingAddButton onPress={handleAddAsset} />
     </View>
   );
 }
@@ -282,202 +222,18 @@ export default function PortfolioScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: Colors.light.backgroundSecondary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#687076',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#11181C',
-  },
-  addButton: {
-    backgroundColor: '#0a7ea4',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FEE2E2',
-    padding: 12,
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 8,
-  },
-  errorText: {
-    color: '#DC2626',
-    fontSize: 14,
-  },
-  retryText: {
-    color: '#0a7ea4',
-    fontSize: 14,
-    fontWeight: '600',
+    backgroundColor: Colors.light.backgroundSecondary,
   },
   listContent: {
     padding: 16,
+  },
+  listContentEmpty: {
     flexGrow: 1,
-  },
-  portfolioCard: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  portfolioCardSelected: {
-    borderWidth: 2,
-    borderColor: '#0a7ea4',
-  },
-  portfolioInfo: {
-    flex: 1,
-  },
-  portfolioHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  portfolioName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#11181C',
-    marginRight: 8,
-  },
-  selectedBadge: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  selectedBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  portfolioDate: {
-    fontSize: 12,
-    color: '#687076',
-  },
-  portfolioActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#11181C',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#687076',
-    textAlign: 'center',
-    paddingHorizontal: 32,
-    marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#11181C',
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  cancelButtonText: {
-    color: '#687076',
-    fontSize: 16,
-  },
-  saveButton: {
-    backgroundColor: '#0a7ea4',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

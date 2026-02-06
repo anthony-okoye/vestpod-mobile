@@ -29,7 +29,7 @@ export interface PerformanceCardProps {
 
 /**
  * Determines chart line color based on trend (start vs end value)
- * Green (#059669) when ending >= starting, Red (#DC2626) when ending < starting
+ * Green (#10B981) when ending >= starting, Red (#EF4444) when ending < starting
  */
 export function getTrendColor(data: PerformanceDataPoint[]): string {
   if (!data || data.length < 2) {
@@ -68,7 +68,7 @@ export function PerformanceCard({
       {
         data: chartValues.length > 0 ? chartValues : [0],
         color: (opacity = 1) => {
-          const rgb = trendColor === Colors.light.success ? '5, 150, 105' : '220, 38, 38';
+          const rgb = trendColor === Colors.light.success ? '16, 185, 129' : '239, 68, 68';
           return `rgba(${rgb}, ${opacity})`;
         },
         strokeWidth: 2,
@@ -82,7 +82,7 @@ export function PerformanceCard({
     backgroundGradientTo: Colors.light.card,
     decimalPlaces: 0,
     color: (opacity = 1) => {
-      const rgb = trendColor === Colors.light.success ? '5, 150, 105' : '220, 38, 38';
+      const rgb = trendColor === Colors.light.success ? '16, 185, 129' : '239, 68, 68';
       return `rgba(${rgb}, ${opacity})`;
     },
     labelColor: () => Colors.light.textSecondary,
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   periodTabSelected: {
-    backgroundColor: Colors.light.text,
+    backgroundColor: Colors.light.buttonPrimary,
   },
   periodText: {
     fontSize: Typography.fontSizes.sm,

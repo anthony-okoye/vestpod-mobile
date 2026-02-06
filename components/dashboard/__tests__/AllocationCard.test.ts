@@ -139,7 +139,7 @@ describe('AllocationCard Property Tests', () => {
    * For any asset type in the allocation data, the color should match 
    * the predefined mapping:
    * - stock → #1E3A8A
-   * - crypto → #059669
+   * - crypto → #10B981
    * - real_estate → #F59E0B
    * - fixed_income → #8B5CF6
    * - commodity → #EC4899
@@ -148,7 +148,7 @@ describe('AllocationCard Property Tests', () => {
     // Define expected color mapping
     const expectedColorMap: Record<string, string> = {
       stock: '#1E3A8A',
-      crypto: '#059669',
+      crypto: '#10B981',
       real_estate: '#F59E0B',
       fixed_income: '#8B5CF6',
       commodity: '#EC4899',
@@ -186,7 +186,7 @@ describe('AllocationCard Property Tests', () => {
     it('should handle equal allocations', () => {
       const data: AllocationItem[] = [
         { type: 'stock', value: 5000, percentage: 50, color: '#1E3A8A' },
-        { type: 'crypto', value: 5000, percentage: 50, color: '#059669' },
+        { type: 'crypto', value: 5000, percentage: 50, color: '#10B981' },
       ];
       
       const sum = data.reduce((acc, item) => acc + item.percentage, 0);
@@ -196,7 +196,7 @@ describe('AllocationCard Property Tests', () => {
     it('should handle multiple small allocations', () => {
       const data: AllocationItem[] = [
         { type: 'stock', value: 1000, percentage: 25, color: '#1E3A8A' },
-        { type: 'crypto', value: 1000, percentage: 25, color: '#059669' },
+        { type: 'crypto', value: 1000, percentage: 25, color: '#10B981' },
         { type: 'real_estate', value: 1000, percentage: 25, color: '#F59E0B' },
         { type: 'fixed_income', value: 1000, percentage: 25, color: '#8B5CF6' },
       ];
@@ -208,7 +208,7 @@ describe('AllocationCard Property Tests', () => {
     it('should handle unequal allocations', () => {
       const data: AllocationItem[] = [
         { type: 'stock', value: 7000, percentage: 70, color: '#1E3A8A' },
-        { type: 'crypto', value: 2000, percentage: 20, color: '#059669' },
+        { type: 'crypto', value: 2000, percentage: 20, color: '#10B981' },
         { type: 'commodity', value: 1000, percentage: 10, color: '#EC4899' },
       ];
       

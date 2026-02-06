@@ -67,8 +67,8 @@ describe('DashboardHeader Property Tests', () => {
    * Validates: Requirements 1.7, 1.8
    * 
    * For any daily change value, the display color should be:
-   * - Green (#059669) when value >= 0
-   * - Red (#DC2626) when value < 0
+   * - Green (#10B981) when value >= 0
+   * - Red (#EF4444) when value < 0
    */
   it('should return correct color for any daily change value', () => {
     fc.assert(

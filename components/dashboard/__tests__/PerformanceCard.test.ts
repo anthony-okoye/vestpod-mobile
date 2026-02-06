@@ -32,8 +32,8 @@ import { TimePeriod, PerformanceDataPoint, getTrendColor } from '../PerformanceC
 // Mock Colors from theme
 const Colors = {
   light: {
-    success: '#059669',
-    error: '#DC2626',
+    success: '#10B981',
+    error: '#EF4444',
   },
 };
 
@@ -98,8 +98,8 @@ describe('PerformanceCard Property Tests', () => {
    * Validates: Requirements 2.7, 2.8
    * 
    * For any portfolio price history data, the line chart color should be:
-   * - Green (#059669) when the ending value is greater than or equal to the starting value
-   * - Red (#DC2626) when the ending value is less than the starting value
+   * - Green (#10B981) when the ending value is greater than or equal to the starting value
+   * - Red (#EF4444) when the ending value is less than the starting value
    */
   it('should return green color when ending value >= starting value', () => {
     fc.assert(

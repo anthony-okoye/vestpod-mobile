@@ -25,7 +25,7 @@ export interface AllocationCardProps {
 
 /**
  * Maps asset type to predefined color from theme
- * stock → #1E3A8A, crypto → #059669, real_estate → #F59E0B,
+ * stock → #1E3A8A, crypto → #10B981, real_estate → #F59E0B,
  * fixed_income → #8B5CF6, commodity → #EC4899
  */
 export function getAssetTypeColor(type: string): string {

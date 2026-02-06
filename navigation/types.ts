@@ -48,6 +48,7 @@ export type AddAssetStackParamList = {
     name?: string;
     currentPrice?: number;
   };
+  AssetSuccess: { assetName?: string; assetType?: string } | undefined;
 };
 
 // Screen Props Types

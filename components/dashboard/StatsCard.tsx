@@ -1,16 +1,17 @@
 /**
  * StatsCard Component
  * 
- * Colored card showing total invested or risk score.
+ * Gradient card showing portfolio statistics (best/worst performer, total invested, risk score).
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius } from '../../constants/theme';
 
-export type StatsType = 'invested' | 'risk';
+export type StatsType = 'best' | 'worst' | 'invested' | 'risk';
 
 export interface StatsCardProps {
   type: StatsType;
@@ -20,13 +21,19 @@ export interface StatsCardProps {
 
 /**
  * Returns background color based on stats type
- * Total Invested: light blue (#DBEAFE) per requirement 5.2
- * Risk Score: light yellow (#FEF3C7) per requirement 5.7
+ * Total Invested: Light blue (#DBEAFE)
+ * Risk Score: Light amber (#FEF3C7)
+ * Per requirements 4.4
  */
 export function getStatsBackgroundColor(type: StatsType): string {
-  return type === 'invested' 
-    ? Colors.light.cardTotalInvested 
-    : Colors.light.cardRiskScore;
+  switch (type) {
+    case 'invested':
+      return '#DBEAFE'; // Light blue
+    case 'risk':
+      return '#FEF3C7'; // Light amber
+    default:
+      return '#F3F4F6'; // Default gray
+  }
 }
 
 /**
@@ -34,22 +41,43 @@ export function getStatsBackgroundColor(type: StatsType): string {
  * Per requirements 5.3 and 5.8
  */
 export function getStatsLabel(type: StatsType): string {
-  return type === 'invested' ? 'Total Invested' : 'Risk Score';
+  switch (type) {
+    case 'best':
+      return 'Best Performer';
+    case 'worst':
+      return 'Worst Performer';
+    case 'invested':
+      return 'Total Invested';
+    case 'risk':
+      return 'Risk Score';
+  }
 }
 
 /**
  * Returns icon name based on stats type
  * Dollar sign for invested (5.6), warning for risk (5.11)
+ * Trending icons for best/worst performers
  */
 export function getStatsIconName(type: StatsType): keyof typeof Ionicons.glyphMap {
-  return type === 'invested' ? 'cash-outline' : 'warning-outline';
+  switch (type) {
+    case 'best':
+      return 'trending-up';
+    case 'worst':
+      return 'trending-down';
+    case 'invested':
+      return 'cash-outline';
+    case 'risk':
+      return 'warning-outline';
+  }
 }
 
 /**
- * Formats value for display based on type
- * Invested: currency format
- * Risk: X/10 format per requirement 5.9
+ * Returns icon color that complements the gradient
+ * White color for better visibility on gradient backgrounds
  */
+export function getStatsIconColor(type: StatsType): string {
+  return '#FFFFFF';
+}
 export function formatStatsValue(type: StatsType, value: number | string): string {
   if (type === 'invested') {
     if (typeof value === 'number') {
