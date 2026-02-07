@@ -84,7 +84,7 @@ const REGION_COLORS = ['#0a7ea4', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#
 const SECTOR_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#607D8B', '#795548'];
 
 export default function InsightsScreen({ navigation }: Props) {
-  const { isPremium, offerings, purchase, restore, isLoading: isPurchaseLoading } = usePurchases();
+  const { isPremium, offerings, purchase, restore, refresh, isLoading: isPurchaseLoading } = usePurchases();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -92,6 +92,9 @@ export default function InsightsScreen({ navigation }: Props) {
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+
+  // Debug logging
+  console.log('[InsightsScreen] Render - isPremium:', isPremium, 'isPurchaseLoading:', isPurchaseLoading);
 
   const loadInsights = useCallback(async () => {
     if (!isPremium) {
@@ -130,10 +133,11 @@ export default function InsightsScreen({ navigation }: Props) {
   }, [isPremium]);
 
   useEffect(() => {
+    console.log('[InsightsScreen] useEffect triggered - isPurchaseLoading:', isPurchaseLoading, 'isPremium:', isPremium);
     if (!isPurchaseLoading) {
       loadInsights();
     }
-  }, [isPurchaseLoading, loadInsights]);
+  }, [isPurchaseLoading, isPremium, loadInsights]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);

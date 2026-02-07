@@ -23,7 +23,7 @@ const REVENUECAT_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS ||
 const REVENUECAT_API_KEY_ANDROID = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID || '';
 
 // Premium entitlement identifier (configured in RevenueCat dashboard)
-const PREMIUM_ENTITLEMENT_ID = 'premium';
+const PREMIUM_ENTITLEMENT_ID = 'Vest Pod Pro';
 
 // ============================================================================
 // Types
@@ -75,10 +75,13 @@ export const purchasesService = {
     }
 
     // Configure RevenueCat
-    await Purchases.configure({
+    Purchases.configure({
       apiKey,
       appUserID: userId || null,
     });
+
+    // Wait a bit for SDK to fully initialize
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     this._initialized = true;
   },

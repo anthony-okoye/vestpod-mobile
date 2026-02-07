@@ -20,6 +20,7 @@ import { secureStorage } from './services/secureStorage';
 import { portfolioService } from './services/api';
 import { configureNotifications, notificationService } from './services/notifications';
 import { useNotifications } from './hooks/useNotifications';
+import { purchasesService } from './services/purchases';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useTheme } from './hooks/useTheme';
 import type { RootStackParamList } from './navigation/types';
@@ -37,10 +38,22 @@ function AppContent() {
     navigationRef,
   });
 
-  // Configure notifications on app start
+  // Configure notifications and initialize RevenueCat on app start
   useEffect(() => {
     configureNotifications();
     notificationService.configureAndroidChannel();
+    
+    // Initialize RevenueCat early (anonymous - will login after auth)
+    const initRevenueCat = async () => {
+      try {
+        // Initialize without user ID first (anonymous)
+        await purchasesService.initialize();
+      } catch (error) {
+        console.error('Failed to initialize RevenueCat:', error);
+      }
+    };
+    
+    initRevenueCat();
   }, []);
 
   // Setup push notifications after user signs in
@@ -94,6 +107,28 @@ function AppContent() {
           },
           token: session.access_token,
         }));
+
+        // Login to RevenueCat with user ID
+        const loginToRevenueCat = async () => {
+          // Wait for initialization to complete
+          let attempts = 0;
+          while (!purchasesService.isInitialized() && attempts < 20) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+          }
+          
+          if (purchasesService.isInitialized()) {
+            try {
+              await purchasesService.login(session.user.id);
+            } catch (error) {
+              console.error('Failed to login to RevenueCat:', error);
+            }
+          } else {
+            console.error('RevenueCat initialization timeout');
+          }
+        };
+        
+        loginToRevenueCat();
       } else {
         // No active session, clear any stored data
         await secureStorage.clearSession();
@@ -157,9 +192,38 @@ function AppContent() {
             },
             token: session.access_token,
           }));
+
+          // Login to RevenueCat with user ID
+          const loginToRevenueCat = async () => {
+            // Wait for initialization to complete
+            let attempts = 0;
+            while (!purchasesService.isInitialized() && attempts < 20) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+              attempts++;
+            }
+            
+            if (purchasesService.isInitialized()) {
+              try {
+                await purchasesService.login(session.user.id);
+              } catch (error) {
+                console.error('Failed to login to RevenueCat:', error);
+              }
+            } else {
+              console.error('RevenueCat initialization timeout');
+            }
+          };
+          
+          loginToRevenueCat();
         } else if (event === 'SIGNED_OUT') {
           await secureStorage.clearSession();
           dispatch(clearCredentials());
+
+          // Logout from RevenueCat
+          try {
+            await purchasesService.logout();
+          } catch (error) {
+            console.error('Failed to logout from RevenueCat:', error);
+          }
         } else if (event === 'TOKEN_REFRESHED' && session) {
           await secureStorage.setAccessToken(session.access_token);
           if (session.refresh_token) {

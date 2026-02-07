@@ -63,11 +63,15 @@ export function usePurchases(options: UsePurchasesOptions = {}): UsePurchasesRet
    * Update premium status from customer info
    */
   const updatePremiumStatus = useCallback((info: CustomerInfo | null) => {
+    console.log('[usePurchases] updatePremiumStatus called with info:', info ? 'present' : 'null');
     if (info) {
-      const hasPremium = info.entitlements.active['premium'] !== undefined;
+      const hasPremium = info.entitlements.active['Vest Pod Pro'] !== undefined;
+      console.log('[usePurchases] Entitlements:', Object.keys(info.entitlements.active));
+      console.log('[usePurchases] Setting isPremium to:', hasPremium);
       setIsPremium(hasPremium);
       setCustomerInfo(info);
     } else {
+      console.log('[usePurchases] Setting isPremium to false (no info)');
       setIsPremium(false);
       setCustomerInfo(null);
     }
@@ -85,8 +89,17 @@ export function usePurchases(options: UsePurchasesOptions = {}): UsePurchasesRet
     setError(null);
 
     try {
-      // Initialize RevenueCat SDK
-      await purchasesService.initialize(userId);
+      // Wait for RevenueCat SDK to be initialized (done in App.tsx)
+      let attempts = 0;
+      while (!purchasesService.isInitialized() && attempts < 20) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
+      if (!purchasesService.isInitialized()) {
+        throw new Error('RevenueCat initialization timeout');
+      }
+      
       initializedRef.current = true;
 
       // Fetch offerings
@@ -100,6 +113,7 @@ export function usePurchases(options: UsePurchasesOptions = {}): UsePurchasesRet
       // Listen for customer info updates
       listenerRemoveRef.current = purchasesService.addCustomerInfoUpdateListener(
         (updatedInfo) => {
+          console.log('[usePurchases] Listener fired - customer info updated');
           updatePremiumStatus(updatedInfo);
         }
       );
@@ -119,6 +133,7 @@ export function usePurchases(options: UsePurchasesOptions = {}): UsePurchasesRet
       return;
     }
 
+    console.log('[usePurchases] Manual refresh triggered');
     setIsLoading(true);
     setError(null);
 
@@ -128,10 +143,12 @@ export function usePurchases(options: UsePurchasesOptions = {}): UsePurchasesRet
         purchasesService.getCustomerInfo(),
       ]);
 
+      console.log('[usePurchases] Refresh complete - updating state');
       setOfferings(fetchedOfferings);
       updatePremiumStatus(info);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to refresh purchases';
+      console.error('[usePurchases] Refresh error:', errorMessage);
       setError(errorMessage);
     } finally {
       setIsLoading(false);
