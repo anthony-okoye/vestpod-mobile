@@ -84,13 +84,14 @@ const REGION_COLORS = ['#0a7ea4', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#
 const SECTOR_COLORS = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#607D8B', '#795548'];
 
 export default function InsightsScreen({ navigation }: Props) {
-  const { isPremium, purchase, restore, isLoading: isPurchaseLoading } = usePurchases();
+  const { isPremium, offerings, purchase, restore, isLoading: isPurchaseLoading } = usePurchases();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [insights, setInsights] = useState<InsightsData | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const loadInsights = useCallback(async () => {
     if (!isPremium) {
@@ -140,8 +141,43 @@ export default function InsightsScreen({ navigation }: Props) {
   };
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
-    // In production, this would trigger the actual purchase flow
-    setShowPaywall(false);
+    if (!offerings?.current) {
+      setError('No subscription plans available');
+      return;
+    }
+
+    setIsPurchasing(true);
+    setError(null);
+
+    try {
+      // Map plan to package identifier (configured in RevenueCat dashboard)
+      const packageIdentifier = plan === 'monthly' ? '$rc_monthly' : '$rc_annual';
+      const pkg = offerings.current.availablePackages.find(
+        p => p.identifier === packageIdentifier
+      );
+
+      if (!pkg) {
+        setError('Selected plan not available');
+        setIsPurchasing(false);
+        return;
+      }
+
+      // Trigger purchase through RevenueCat
+      const result = await purchase(pkg);
+
+      if (result.success) {
+        setShowPaywall(false);
+        // Premium status will auto-update via listener in usePurchases hook
+        // Insights will reload automatically when isPremium changes
+      } else if (result.error && result.error !== 'Purchase cancelled') {
+        setError(result.error);
+      }
+      // If cancelled, keep paywall open
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Purchase failed');
+    } finally {
+      setIsPurchasing(false);
+    }
   };
 
   const handleRestorePurchases = async () => {
@@ -188,6 +224,8 @@ export default function InsightsScreen({ navigation }: Props) {
           onSubscribe={handleSubscribe}
           onRestorePurchases={handleRestorePurchases}
           feature="AI Portfolio Insights"
+          isLoading={isPurchasing}
+          error={error}
         />
       </View>
     );

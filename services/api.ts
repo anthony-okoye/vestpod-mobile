@@ -115,9 +115,17 @@ export const portfolioService = {
    * Create a new portfolio
    */
   async createPortfolio(name: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('portfolios')
-      .insert({ name })
+      .insert({
+        name,
+        user_id: user.id,
+      })
       .select()
       .single();
     
@@ -200,9 +208,18 @@ export const assetService = {
     current_price?: number;
     metadata?: Record<string, any>;
   }) {
+    // Get current user ID for RLS policy
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('assets')
-      .insert(assetData)
+      .insert({
+        ...assetData,
+        user_id: user.id,
+      })
       .select()
       .single();
     
@@ -322,9 +339,17 @@ export const alertService = {
     condition_value: number;
     is_active: boolean;
   }) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('alerts')
-      .insert(alertData)
+      .insert({
+        ...alertData,
+        user_id: user.id,
+      })
       .select()
       .single();
     

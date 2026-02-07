@@ -13,6 +13,7 @@ import {
   Modal,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -24,6 +25,8 @@ export interface PremiumPaywallProps {
   onSubscribe: (plan: SubscriptionPlan) => void;
   onRestorePurchases: () => void;
   feature?: string;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 interface PremiumFeature {
@@ -76,6 +79,8 @@ export function PremiumPaywall({
   onSubscribe,
   onRestorePurchases,
   feature,
+  isLoading = false,
+  error = null,
 }: PremiumPaywallProps): React.ReactElement {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('annual');
 
@@ -207,14 +212,26 @@ export function PremiumPaywall({
         </ScrollView>
 
         <View style={styles.footer}>
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           <TouchableOpacity
-            style={styles.trialButton}
+            style={[styles.trialButton, isLoading && styles.trialButtonDisabled]}
             onPress={handleStartTrial}
+            disabled={isLoading}
             accessibilityLabel="Start 7-day free trial"
             accessibilityRole="button"
           >
             <View style={styles.trialButtonGradient}>
-              <Text style={styles.trialButtonText}>Start 7-Day Free Trial</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.trialButtonText}>Start 7-Day Free Trial</Text>
+              )}
             </View>
           </TouchableOpacity>
 
@@ -225,10 +242,13 @@ export function PremiumPaywall({
           <TouchableOpacity
             style={styles.restoreButton}
             onPress={onRestorePurchases}
+            disabled={isLoading}
             accessibilityLabel="Restore purchases"
             accessibilityRole="button"
           >
-            <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+            <Text style={[styles.restoreButtonText, isLoading && styles.restoreButtonTextDisabled]}>
+              Restore Purchases
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -434,10 +454,28 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
   },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#DC2626',
+  },
   trialButton: {
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 12,
+  },
+  trialButtonDisabled: {
+    opacity: 0.6,
   },
   trialButtonGradient: {
     paddingVertical: 16,
@@ -464,6 +502,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0a7ea4',
     fontWeight: '500',
+  },
+  restoreButtonTextDisabled: {
+    opacity: 0.5,
   },
 });
 
